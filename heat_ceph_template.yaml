@@ -1,9 +1,7 @@
 heat_template_version: 2013-05-23
 
 parameters:
-  salt_master_image_id:
-    type: string
-  storage_node_image_id:
+  image_id:
     type: string
   mon_flavor:
     type: string
@@ -11,12 +9,10 @@ parameters:
     type: string
   az:
     type: string
-  node_key_name:
-    type: string
-  saltmaster_key_name:
+  ssh_key_name:
     type: string
 
-  saltmaster_extra_packages:
+  login_node_extra_packages:
     type: string
   node_extra_packages:
     type: string
@@ -28,29 +24,28 @@ parameters:
     type: number
   osd_volume_size_in_gb:
     type: number
+  metadata_node_count:
+    type: number
 
 resources:
   node_security_group:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: ping_and_ssh
-      description: Ping and SSH
+      name: ssh_ping_inbound
+      description: traffic inbound
       rules:
         - protocol: icmp
         - protocol: tcp
           port_range_min: 22
           port_range_max: 22
 
-  saltmaster_security_group:
+  login_node_security_group:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: salt_ssh_ping_inbound
-      description: Salt traffic inbound
+      name: login_node_ssh_ping_inbound
+      description: traffic inbound
       rules:
         - protocol: icmp
-        - protocol: tcp
-          port_range_min: 4505
-          port_range_max: 4506
         - protocol: tcp
           port_range_min: 22
           port_range_max: 22
@@ -69,13 +64,12 @@ resources:
         type: heat_storage_node_template.yaml
         properties:
           node_extra_packages: { get_param: node_extra_packages }
-          storage_node_image_id: { get_param: storage_node_image_id }
+          image_id: { get_param: image_id }
           storage_node_flavor: { get_param: storage_node_flavor }
           osds_per_storage_node: { get_param: osds_per_storage_node }
-          node_key_name: { get_param: node_key_name }
+          ssh_key_name: { get_param: ssh_key_name }
           osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
           az: { get_param: az }
-          #salt_master_public_ip: { get_attr: [salt-master, first_address] }
           storage_node_name:
             str_replace:
               template: storage-%index%-$random_string
@@ -89,8 +83,8 @@ resources:
       resource_def:
         type: OS::Nova::Server
         properties:
-          key_name: { get_param: node_key_name }
-          image: { get_param: storage_node_image_id }
+          key_name: { get_param: ssh_key_name }
+          image: { get_param: image_id }
           flavor: { get_param: mon_flavor }
           availability_zone: { get_param: az }
           security_groups:
@@ -104,30 +98,52 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash -v
-                sudo mkdir -p /etc/salt
-                #echo master: $SALT_MASTER | tr -d '[]' >> /etc/salt/minion
-                sudo apt-get update
-                DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q salt-minion $EXTRA_PACKAGES
+                DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q $EXTRA_PACKAGES
               params:
                 $EXTRA_PACKAGES: { get_param: node_extra_packages }
-                #$SALT_MASTER: { get_attr: [salt-master, first_address]}
 
-  salt-master:
+  metadata-nodes:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: metadata_node_count }
+      resource_def:
+        type: OS::Nova::Server
+        properties:
+          key_name: { get_param: ssh_key_name }
+          image: { get_param: image_id }
+          flavor: { get_param: mon_flavor }
+          availability_zone: { get_param: az }
+          security_groups:
+            - {get_resource: node_security_group}
+          name:
+            str_replace:
+              template: mds-%index%-$random_string
+              params:
+                $random_string: { get_resource: random_string }
+          user_data:
+            str_replace:
+              template: |
+                #!/bin/bash -v
+                DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q $EXTRA_PACKAGES
+              params:
+                $EXTRA_PACKAGES: { get_param: node_extra_packages }
+
+  login-node:
     type: OS::Heat::ResourceGroup
     properties:
       count: 1
       resource_def:
         type: OS::Nova::Server
         properties:
-          key_name: { get_param: saltmaster_key_name }
-          image: { get_param: salt_master_image_id }
+          key_name: { get_param: ssh_key_name }
+          image: { get_param: image_id }
           flavor: { get_param: storage_node_flavor }
           availability_zone: { get_param: az }
           security_groups:
-            - {get_resource: saltmaster_security_group}
+            - {get_resource: login_node_security_group}
           name:
             str_replace:
-              template: salt-master-$random_string
+              template: login-node-$random_string
               params:
                 $random_string: { get_resource: random_string }
           user_data:
@@ -135,21 +151,11 @@ resources:
               template: |
                 #!/bin/bash -v
                 sudo apt-get update
-                sudo apt-get install -y salt-master $EXTRA_PACKAGES
-                curl https://raw.githubusercontent.com/saltstack/salt/develop/pkg/salt.ufw | tee /etc/ufw/applications.d/salt
-                ufw allow salt
+                sudo apt-get install -y $EXTRA_PACKAGES
               params:
-                $EXTRA_PACKAGES: { get_param: saltmaster_extra_packages }
+                $EXTRA_PACKAGES: { get_param: login_node_extra_packages }
 
 outputs:
-  salt-master-public-ip:
-    description: Use nova list for all other cluster nodes
-    value: { get_attr: [salt-master, first_address]}
-
-    # mons:
-    #     description: Monitor nodes public ip(s)
-    #     value: { get_attr: [mons, first_address]}
-
-    # storage-nodes:
-    #     description: OSD nodes public ip(s)
-    #     value: { get_attr: [storage-nodes, first_address]}
+  login-node-public-ip:
+    description: Cluster admin node.  ssh -A to this to auth to other nodes.
+    value: { get_attr: [login-node, first_address]}

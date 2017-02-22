@@ -4,13 +4,13 @@ description: >
   A single storage node, with multiple volumes
 
 parameters:
-  storage_node_image_id:
+  image_id:
     type: string
   storage_node_flavor:
     type: string
   az:
     type: string
-  node_key_name:
+  ssh_key_name:
     type: string
   node_extra_packages:
     type: string
@@ -22,8 +22,6 @@ parameters:
     type: string
   node_extra_packages:
     type: string
-  #salt_master_public_ip:
-  #  type: string
 
 resources:
   node_security_group:
@@ -40,9 +38,9 @@ resources:
   storage-node:
     type: OS::Nova::Server
     properties:
-      image: { get_param: storage_node_image_id }
+      image: { get_param: image_id }
       flavor: { get_param: storage_node_flavor }
-      key_name: { get_param: node_key_name }
+      key_name: { get_param: ssh_key_name }
       availability_zone: { get_param: az }
       security_groups:
         - {get_resource: node_security_group}
@@ -51,13 +49,9 @@ resources:
         str_replace:
           template: |
             #!/bin/bash -v
-            sudo mkdir -p /etc/salt
-            #echo master: $SALT_MASTER | tr -d '[]' >> /etc/salt/minion
-            sudo apt-get update
-            DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q salt-minion $EXTRA_PACKAGES
+            DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q $EXTRA_PACKAGES
           params:
             $EXTRA_PACKAGES: { get_param: node_extra_packages }
-            #$SALT_MASTER: { get_param: salt_master_public_ip }
 
   group_of_volumes:
     type: OS::Heat::ResourceGroup
