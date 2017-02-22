@@ -16,7 +16,7 @@ parameters:
   login_node_extra_packages: ansible git curl python-pip
   # Extra packages to install on the nodes:
   node_extra_packages: git ceph ceph-mds radosgw
-  # Ceph release name:
+  # Ceph release name: jewel is LTS, kraken is new (with blustor)
   ceph_release_name: jewel
   # The total number of metadata servers (for cephfs)
   metadata_node_count: 2
