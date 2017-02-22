@@ -1,0 +1,30 @@
+parameters:
+  # BOOTSTRAP
+  # Which glance image to use for the salt-master:
+  salt_master_image_id: dd8c8969-5e4f-4482-9097-c5a896bc46f8
+  # Which glance image to use for the salt-minions:
+  storage_node_image_id: dd8c8969-5e4f-4482-9097-c5a896bc46f8
+  # Which instance type to use for the mons:
+  mon_flavor: m2.tiny
+  # Which instance type to use for the storage (OSD) nodes:
+  storage_node_flavor: m2.tiny
+  # Where to launch all the instances in this cluster:
+  az: NCI
+  #The Keystone based SSH key-pair used between salt-master and nodes:
+  node_key_name: hoolio
+  # The Keystone based SSH key to access salt-master (not for nodes):
+  saltmaster_key_name: hoolio
+
+  # CEPH
+  # Extra packages to install on the salt-master (salt-master is required):
+  saltmaster_extra_packages: ansible git curl python-pip
+  # Extra packages to install on the nodes (salt-minion is compulsory):
+  node_extra_packages: git
+  # The total number of Monitor Nodes:
+  mon_count: 3
+  # How many storage (OSD) nodes to create:
+  storage_node_count: 12
+  # For each storage node, how many volumes (OSDs):
+  osds_per_storage_node: 4
+  #The size of each OSD volume:
+  osd_volume_size_in_gb: 1

@@ -1,0 +1,76 @@
+heat_template_version: 2013-05-23
+
+description: >
+  A single storage node, with multiple volumes
+
+parameters:
+  storage_node_image_id:
+    type: string
+  storage_node_flavor:
+    type: string
+  az:
+    type: string
+  node_key_name:
+    type: string
+  node_extra_packages:
+    type: string
+  osds_per_storage_node:
+    type: number
+  osd_volume_size_in_gb:
+    type: number
+  storage_node_name:
+    type: string
+  node_extra_packages:
+    type: string
+  #salt_master_public_ip:
+  #  type: string
+
+resources:
+  node_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+        name: ping_and_ssh
+        description: Ping and SSH
+        rules:
+          - protocol: icmp
+          - protocol: tcp
+            port_range_min: 22
+            port_range_max: 22
+
+  storage-node:
+    type: OS::Nova::Server
+    properties:
+      image: { get_param: storage_node_image_id }
+      flavor: { get_param: storage_node_flavor }
+      key_name: { get_param: node_key_name }
+      availability_zone: { get_param: az }
+      security_groups:
+        - {get_resource: node_security_group}
+      name: { get_param: storage_node_name }
+      user_data:
+        str_replace:
+          template: |
+            #!/bin/bash -v
+            sudo mkdir -p /etc/salt
+            #echo master: $SALT_MASTER | tr -d '[]' >> /etc/salt/minion
+            sudo apt-get update
+            DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q salt-minion $EXTRA_PACKAGES
+          params:
+            $EXTRA_PACKAGES: { get_param: node_extra_packages }
+            #$SALT_MASTER: { get_param: salt_master_public_ip }
+
+  group_of_volumes:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: { get_param: osds_per_storage_node }
+      resource_def:
+        type: B_make_and_attach_volume.yaml
+        properties:
+          instance_id: { get_resource: storage-node }
+          osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
+          az: { get_param: az }
+
+# outputs:
+#   storage-node:
+#     description: IP Address of server having volumes attached.
+#     value: { get_attr: [storage-node, first_address] }

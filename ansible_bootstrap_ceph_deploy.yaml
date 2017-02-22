@@ -1,0 +1,11 @@
+---
+- hosts: all
+  name: bootstrap nodes for ceph-deploy
+  become: true
+
+  tasks:
+    - name: make remote ceph user
+      action: user name=ceph state=present shell=/bin/bash home=/home/ceph
+
+    - name: copy over sudo spec for ceph user
+      action: copy src=etc-sudoers.d-ceph dest=/etc/sudoers.d/ceph mode=0440
