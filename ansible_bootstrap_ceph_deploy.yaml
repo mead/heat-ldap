@@ -10,5 +10,8 @@
     - name: copy over sudo spec for ceph user
       action: copy src=etc-sudoers.d-ceph dest=/etc/sudoers.d/ceph mode=0440
 
+    - name: make /home/ceph/.ssh
+      action: file path=/home/ceph/.ssh state=present owner=ceph
+
     - name: copy over authorized_keys so ssh -A works for ceph
       action: copy src=/home/ubuntu/.ssh/authorized_keys dest=/home/ceph/.ssh/authorized_keys owner=ceph
