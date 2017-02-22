@@ -160,7 +160,7 @@ copied over for ceph, so you should now exit and login as ceph
 1. exit ssh
 1. login again with `ssh -A ceph@x.x.x.x`
 1. `ansible all -s -o -a 'whoami'`
-1. `pip install ceph-deploy`
+1. `sudo apt-get install ceph-deploy`
 
 from here on in, all work should be done as ceph, and from the login node.
 

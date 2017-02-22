@@ -15,7 +15,9 @@ parameters:
   # Extra packages to install on the login node:
   login_node_extra_packages: ansible git curl python-pip
   # Extra packages to install on the nodes:
-  node_extra_packages: git
+  node_extra_packages: git ceph ceph-mds radosgw
+  # Ceph release name:
+  ceph_release_name: jewel
   # The total number of metadata servers (for cephfs)
   metadata_node_count: 2
   # The total number of Monitor Nodes:

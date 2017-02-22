@@ -26,6 +26,8 @@ parameters:
     type: number
   metadata_node_count:
     type: number
+  ceph_release_name:
+    type: string
 
 resources:
   node_security_group:
@@ -69,6 +71,7 @@ resources:
           osds_per_storage_node: { get_param: osds_per_storage_node }
           ssh_key_name: { get_param: ssh_key_name }
           osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
+          ceph_release_name: { get_param: ceph_release_name }
           az: { get_param: az }
           storage_node_name:
             str_replace:
@@ -98,9 +101,13 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash -v
+                wget -q -O- 'https://download.ceph.com/keys/release.asc' | sudo apt-key add -
+                echo deb http://download.ceph.com/debian-$CEPH_RELEASE/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/ceph.list
+                sudo apt-get update
                 DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q $EXTRA_PACKAGES
               params:
                 $EXTRA_PACKAGES: { get_param: node_extra_packages }
+                $CEPH_RELEASE: { get_param: ceph_release_name }
 
   metadata-nodes:
     type: OS::Heat::ResourceGroup
@@ -124,9 +131,13 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash -v
+                wget -q -O- 'https://download.ceph.com/keys/release.asc' | sudo apt-key add -
+                echo deb http://download.ceph.com/debian-$CEPH_RELEASE/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/ceph.list
+                sudo apt-get update
                 DEBIAN_FRONTEND=noninteractive sudo apt-get install -y -q $EXTRA_PACKAGES
               params:
                 $EXTRA_PACKAGES: { get_param: node_extra_packages }
+                $CEPH_RELEASE: { get_param: ceph_release_name }
 
   login-node:
     type: OS::Heat::ResourceGroup
