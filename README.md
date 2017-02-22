@@ -91,7 +91,31 @@ You should try/use any/all of the following until you get CREATE_COMPLETE
 for your environment.
 
 # Setup Ceph cluster (ansible and ceph-deploy)
-From here on most work happens from the login node of the ceph cluster.  
+From here on most work happens from the login node of the ceph cluster.  Unless
+otherwise advised, all commands now happen there.
+
+## so what did we get??
+```
+$ openstack server list
++----------------------------------+----------------+--------+-------------------+----------------------------------+
+| ID                               | Name           | Status | Networks          | Image Name                       |
++----------------------------------+----------------+--------+-------------------+----------------------------------+
+| 32302178-90d5-4217-b882-bca477a9 | storage-1-euk  | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| 2de1                             |                |        |                   | amd64                            |
+| 367ea7e6-6e94-4919-9b9f-         | mds-1-euk      | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| aabb66418f2b                     |                |        |                   | amd64                            |
+| 0073c756-cba4-4479-a737-db9e1354 | mon-1-euk      | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| a9d0                             |                |        |                   | amd64                            |
+| 619eaa80-5415-4ae8-b81a-         | storage-0-euk  | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| c209b76577ae                     |                |        |                   | amd64                            |
+| 722c3afa-                        | login-node-euk | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| ea69-4a5e-a084-5669cca6c3a2      |                |        |                   | amd64                            |
+| 1434f1f1-74a5-4dcf-a11a-         | mds-0-euk      | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| 98d57f405676                     |                |        |                   | amd64                            |
+| 08cf0493-8294-42c3-ae3b-         | mon-0-euk      | ACTIVE | nci=x.x.x.x       | NeCTAR Ubuntu 16.04 LTS (Xenial) |
+| 76d89bbfcc11                     |                |        |                   | amd64                            |
++----------------------------------+----------------+--------+-------------------+----------------------------------+
+```
 
 ## connect to the (new) login node
 1. determine the ip address of the login-node.  Caution if you have multiple ceph stacks ;)
@@ -101,32 +125,56 @@ From here on most work happens from the login node of the ceph cluster.
 1. ssh to the login node making sure to enable ssh-agent
 .. eg: `ssh -A ubuntu@xxx.xxx.xxx.xxx`
 
-## bootstrap ansible
-Ansible on the login nodes needs to know about your instances.  In an ideal world
+## manually :( bootstrap ansible
+Ansible on the login node needs to know about your instances.  In an ideal world
 /etc/ansible/hosts would be populated automatically, but it's not yet (help please!).
 Until then we make it manually; apologies for that.
+1. connect to the deployment node (ie where you're running the openstack client)
 1. generate a list of the storage nodes
 .. `openstack server list | grep storage` etc, and build up the file.  eg;
-```[storage]
+```
+[storage]
 130.56.253.179
 130.56.253.175
-130.56.253.178
-130.56.253.17
+..
 
 [mons]
 130.56.253.164
 130.56.253.160
-130.56.253.161```etc
+..
+```
+etc
 1. test ansible connectivity:
 . `ansible all -s -o 'hostname'`
+1. type yes alot.  or fix ansible config to not require that..
 
-##
+## bootstrap ceph-deploy
+1. connect to your login node as ubuntu
+1. `git clone git@github.com:hooliowobbits/heat-ceph.git`
+1. `cd heat-ceph`
+1. `ansible-playbook ansible_bootstrap_ceph_deploy.yaml`
 
-# EVERYTHING AFTER HERE IS PROBABLY WRONG
-1. @storage-nodes = `heat output-show ceph storage-nodes | grep -E -o '[a-z0-9.]+'`
-1. @mons = `heat output-show ceph mons | grep -E -o '[a-z0-9.]+'`
-1. $salt-master-ip = `heat output-show ceph salt-master | grep -E -o '[a-z0-9.]+'`
-1. ssh ubuntu@$salt-master-ip
-1. vi /etc/ansible/hosts
-1. enter @mons under a [mons] heading, same with storage-nodes
-1. `ansible all -o -s -a 'whoami'`
+what just happened?  not much, but the login-node should now have a ceph user
+and so should all the ceph nodes.  also the authorized_keys for ubuntu has been
+copied over for ceph, so you should now exit and login as ceph
+1. exit ssh
+1. login again with `ssh -A ceph@x.x.x.x`
+1. `ansible all -s -o -a 'whoami'`
+1. `pip install ceph-deploy`
+
+from here on in, all work should be done as ceph, and from the login node.
+
+## setup name resolution
+nasty hack;
+1. `openstack  server list`
+1. paste into google spreadsheets..
+1. handcraft /etc/hosts on login node
+
+## run cepy-deploy and make things happen!!
+out of scope ;)
+
+see http://docs.ceph.com/docs/master/rados/deployment/ceph-deploy-new/
+
+# Things i don't like (because they aren't working nicely)
+1. Security groups are duplicated and embedded in multiple templates.
+1. Need better way to get cluster name resolution.

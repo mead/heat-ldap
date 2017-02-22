@@ -16,13 +16,13 @@ parameters:
   login_node_extra_packages: ansible git curl python-pip
   # Extra packages to install on the nodes:
   node_extra_packages: git
+  # The total number of metadata servers (for cephfs)
+  metadata_node_count: 2
   # The total number of Monitor Nodes:
-  mon_count: 1
+  mon_count: 3
   # How many storage (OSD) nodes to create:
-  storage_node_count: 1
+  storage_node_count: 7
   # For each storage node, how many volumes (OSDs):
-  osds_per_storage_node: 1
+  osds_per_storage_node: 4
   #The size of each OSD volume:
   osd_volume_size_in_gb: 1
-  # The total number of metadata servers (for cephfs)
-  metadata_node_count: 1
