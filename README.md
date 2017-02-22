@@ -145,8 +145,14 @@ Until then we make it manually; apologies for that.
 ```
 etc
 1. test ansible connectivity:
-. `ansible all -s -o 'hostname'`
+. `ansible all -s -o -a 'hostname'`
 1. type yes alot.  or fix ansible config to not require that..
+
+## manually :( setup name resolution
+nasty hack;
+1. `openstack  server list`
+1. paste into google spreadsheets..
+1. handcraft /etc/hosts on login node
 
 ## bootstrap ceph-deploy
 1. connect to your login node as ubuntu
@@ -163,12 +169,6 @@ copied over for ceph, so you should now exit and login as ceph
 1. `sudo apt-get install ceph-deploy`
 
 from here on in, all work should be done as ceph, and from the login node.
-
-## setup name resolution
-nasty hack;
-1. `openstack  server list`
-1. paste into google spreadsheets..
-1. handcraft /etc/hosts on login node
 
 ## run cepy-deploy and make things happen!!
 out of scope ;)
