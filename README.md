@@ -23,6 +23,8 @@ that is no guarantee that something bad will not happen.  be careful.
 1. an openstack tennancy with sufficient instance and volume quota.  ideally empty.
 1. an open-rc.sh file for the tennancy above
 1. a deployment node (I use an instance running 16.04) or laptop etc to work from.  
+1. a functioning ssh-agent.  if you don't know what that is, you'll need to.
+1. understand openstack images, default usernames etc
 
 ## testing
 1. `openstack stack list` should work but show no existing stacks
@@ -36,7 +38,9 @@ leave this session open as we'll be using it in a moment
 .. `git clone git@github.com:hooliowobbits/heat-ceph.git`
 1. `cd heat-ceph`
 1. have a look at heat_ceph_environment.yaml and sanitise for your environment
-1. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
+1. no really.  have a look at heat_ceph_environment.yaml; it's critical.
+1. then create the stack:
+. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
 ```
 +---------------------+--------------------------------------+
 | Field               | Value                                |
@@ -67,15 +71,22 @@ You should try/use any/all of the following until you get CREATE_COMPLETE
 1. Delete the stack and try again
 ..`openstack stack delete ceph`
 ..`openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
+1. cry?
+1. Talk to your usual support channels.  You may need to modify the heat template(s)
+for your environment.
 
 # Setup ceph cluster
-From here on most work happens from the login node of the ceph cluster.  
+From here on most work happens from the login node of the ceph cluster.  For
+legacy reasons, that node is called the salt-master; i may yet move to using
+salt for deployment.  
 
 ## Setup cluster comms
 1. determine the ip address of the login-node.  Caution if you have multiple ceph stacks ;)
-..`openstack server list | grep login`
-..or `openstack stack ceph show | grep login`
-1. ssh to the login node, where username and ip address are appropriate to your image and instance
+..`openstack server list | grep salt-master`
+..or `openstack stack ceph show | grep salt-master`
+1. note the default username of the glance image you're using
+1. ssh to the login node making sure to enable ssh-agent
+.. eg: `ssh -A ubuntu@xxx.xxx.xxx.xxx`
 
 ### bootstrap ansible
 1. generate a list of the storage nodes
@@ -83,7 +94,7 @@ From here on most work happens from the login node of the ceph cluster.
 
 etc and build up /etc/ansible/hosts on the login node.  I'd like this to be automated.
 
-# EVERYTHING
+# EVERYTHING AFTER HERE IS PROBABLY WRONG
 
 
 1. @storage-nodes = `heat output-show ceph storage-nodes | grep -E -o '[a-z0-9.]+'`
