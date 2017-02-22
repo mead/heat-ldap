@@ -9,6 +9,9 @@ environment.  in particular it can call and will call many of the openstack APIs
 and like anything from the internet, you should really understand what this does
 before running it.  i promise i won't intentionally harm your environment.
 
+`$ openstack stack delete ceph`
+`Are you sure you want to delete this stack(s) [y/N]? y`
+
 ## prerequisites
 1. an openstack environment :) and tacit approval to lean on it a bit
 1. a functioning current openstack client:
@@ -32,12 +35,27 @@ leave this session open as we'll be using it in a moment
 .. `git clone git@github.com:hooliowobbits/heat-ceph.git`
 1. `cd heat-ceph`
 1. have a look at heat_ceph_environment.yaml and sanitise for your environment
-1. `openstack stack create -f B_ceph.yaml -e B_env.yaml ceph`
+1. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
+```
++---------------------+--------------------------------------+
+| Field               | Value                                |
++---------------------+--------------------------------------+
+| id                  | bed657bf-b172-47e9-af0e-2602fef80ceb |
+| stack_name          | ceph                                 |
+| description         | No description                       |
+| creation_time       | 2017-02-22T01:46:08                  |
+| updated_time        | None                                 |
+| stack_status        | CREATE_IN_PROGRESS                   |
+| stack_status_reason |                                      |
++---------------------+--------------------------------------+`
+```
 1. wait, then check stack deployment status with
 1. `openstack stack show ceph`
 
 everything from here assumes the stack built correctly.  If it didn't check the
 built errors that appear under status(?)
+
+# EVERYTHING HERE NOT VERIFIED YET
 
 ## setup cluster comms
 bootstrap ansible

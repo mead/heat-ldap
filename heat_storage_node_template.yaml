@@ -64,7 +64,7 @@ resources:
     properties:
       count: { get_param: osds_per_storage_node }
       resource_def:
-        type: B_make_and_attach_volume.yaml
+        type: heat_make_and_attach_volume_template.yaml
         properties:
           instance_id: { get_resource: storage-node }
           osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
