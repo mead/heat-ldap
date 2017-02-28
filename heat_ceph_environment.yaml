@@ -13,9 +13,9 @@ parameters:
 
   # CEPH
   # Extra packages to install on the login node:
-  login_node_extra_packages: ansible git curl python-pip
+  login_node_extra_packages: ansible git ceph-deploy ceph ceph-mds radosgw ntp ntpdate ntp-doc
   # Extra packages to install on the nodes:
-  node_extra_packages: git ceph ceph-mds radosgw
+  node_extra_packages: git ceph ceph-mds radosgw ntp ntpdate ntp-doc
   # Ceph release name: jewel is LTS, kraken is new (with blustor)
   ceph_release_name: jewel
   # The total number of metadata servers (for cephfs)
@@ -28,3 +28,5 @@ parameters:
   osds_per_storage_node: 4
   #The size of each OSD volume:
   osd_volume_size_in_gb: 1
+  # # OSD journal size.  There's only one of these
+  # osd_journal_volume_size_in_gb: 8

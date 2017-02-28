@@ -2,6 +2,7 @@
 - hosts: all
   name: bootstrap nodes for ceph-deploy
   become: true
+  user: ubuntu
 
   tasks:
     - name: make remote ceph user
@@ -13,5 +14,13 @@
     - name: make /home/ceph/.ssh
       action: file path=/home/ceph/.ssh state=directory owner=ceph
 
+    # - name: copy over authorized_keys so ssh -A works for ceph
+    #   action: copy src=/home/ubuntu/.ssh/authorized_keys dest=/home/ceph/.ssh/authorized_keys owner=ceph
+
     - name: copy over authorized_keys so ssh -A works for ceph
-      action: copy src=/home/ubuntu/.ssh/authorized_keys dest=/home/ceph/.ssh/authorized_keys owner=ceph
+      shell: rsync -ci /home/ubuntu/.ssh/authorized_keys /home/ceph/.ssh/authorized_keys
+      register: rsync_result
+      changed_when: "rsync_result.stdout != ''"
+
+    - name: chmod ceph /home/ceph/.ssh/authorized_keys
+      action: file path=/home/ceph/.ssh/authorized_keys state=file owner=ceph

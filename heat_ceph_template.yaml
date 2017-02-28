@@ -28,8 +28,26 @@ parameters:
     type: number
   ceph_release_name:
     type: string
+  # osd_journal_volume_size_in_gb:
+  #   type: number
 
 resources:
+  mon_security_group:
+    type: OS::Neutron::SecurityGroup
+    properties:
+      name: ssh_ping_mon_inbound
+      description: traffic inbound
+      rules:
+        - protocol: icmp
+        - protocol: tcp
+          port_range_min: 22
+          port_range_max: 22
+        - protocol: tcp
+          port_range_min: 6789
+          port_range_max: 6789
+          remote_mode: remote_group_id
+          #remote_group_id: { get_resource: mon_security_group } # omit remote_group_id to reference yourself
+
   node_security_group:
     type: OS::Neutron::SecurityGroup
     properties:
@@ -65,6 +83,7 @@ resources:
       resource_def:
         type: heat_storage_node_template.yaml
         properties:
+          #osd_journal_volume_size_in_gb: { get_param: osd_journal_volume_size_in_gb }
           node_extra_packages: { get_param: node_extra_packages }
           image_id: { get_param: image_id }
           storage_node_flavor: { get_param: storage_node_flavor }
@@ -86,12 +105,15 @@ resources:
       resource_def:
         type: OS::Nova::Server
         properties:
+          metadata:
+            ansible_host_groups: mons
+            ansible_host_vars: role=master
           key_name: { get_param: ssh_key_name }
           image: { get_param: image_id }
           flavor: { get_param: mon_flavor }
           availability_zone: { get_param: az }
           security_groups:
-            - {get_resource: node_security_group}
+            - {get_resource: mon_security_group}
           name:
             str_replace:
               template: mon-%index%-$random_string
@@ -116,6 +138,9 @@ resources:
       resource_def:
         type: OS::Nova::Server
         properties:
+          metadata:
+            ansible_host_groups: mds
+            ansible_host_vars: role=master
           key_name: { get_param: ssh_key_name }
           image: { get_param: image_id }
           flavor: { get_param: mon_flavor }
@@ -146,6 +171,9 @@ resources:
       resource_def:
         type: OS::Nova::Server
         properties:
+          metadata:
+            ansible_host_groups: login
+            ansible_host_vars: role=master
           key_name: { get_param: ssh_key_name }
           image: { get_param: image_id }
           flavor: { get_param: storage_node_flavor }
@@ -161,6 +189,8 @@ resources:
             str_replace:
               template: |
                 #!/bin/bash -v
+                wget -q -O- 'https://download.ceph.com/keys/release.asc' | sudo apt-key add -
+                echo deb http://download.ceph.com/debian-$CEPH_RELEASE/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/ceph.list
                 sudo apt-get update
                 sudo apt-get install -y $EXTRA_PACKAGES
               params:

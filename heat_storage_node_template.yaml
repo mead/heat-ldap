@@ -24,6 +24,8 @@ parameters:
     type: string
   ceph_release_name:
     type: string
+  # osd_journal_volume_size_in_gb:
+  #   type: number
 
 resources:
   node_security_group:
@@ -40,6 +42,9 @@ resources:
   storage-node:
     type: OS::Nova::Server
     properties:
+      metadata:
+        ansible_host_groups: storage
+        ansible_host_vars: role=master
       image: { get_param: image_id }
       flavor: { get_param: storage_node_flavor }
       key_name: { get_param: ssh_key_name }
@@ -69,6 +74,19 @@ resources:
           instance_id: { get_resource: storage-node }
           osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
           az: { get_param: az }
+
+  # osd_journal_volume:
+  #   type: OS::Cinder::Volume
+  #   properties:
+  #     size: { get_param: osd_journal_volume_size_in_gb }
+  #     description: Volume for OSD Journal
+  #     availability_zone: { get_param: az }
+  #
+  # osd_journal_volume_attachment:
+  #   type: OS::Cinder::VolumeAttachment
+  #   properties:
+  #     volume_id: { get_resource: osd_journal_volume }
+  #     instance_uuid: { get_resource: storage-node }
 
 # outputs:
 #   storage-node:
