@@ -26,20 +26,6 @@ parameters:
     type: string
 
 resources:
-  node_security_group:
-    type: OS::Neutron::SecurityGroup
-    properties:
-        name: ping_and_ssh_and_osd
-        description: Ping and SSH
-        rules:
-          - protocol: icmp
-          - protocol: tcp
-            port_range_min: 22
-            port_range_max: 22
-          - protocol: tcp
-            port_range_min: 6800
-            port_range_max: 7300
-
   storage-node:
     type: OS::Nova::Server
     properties:
@@ -51,7 +37,8 @@ resources:
       key_name: { get_param: ssh_key_name }
       availability_zone: { get_param: az }
       security_groups:
-        - {get_resource: node_security_group}
+        - external_inbound
+        - cluster_internal
       name: { get_param: storage_node_name }
       user_data:
         str_replace:

@@ -32,38 +32,22 @@ parameters:
   #   type: number
 
 resources:
-  mon_security_group:
+  cluster_internal:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: ssh_ping_mon_inbound
-      description: traffic inbound
+      name: cluster_internal
+      description: all ports open but only to other cluster nodes
       rules:
         - protocol: icmp
-        - protocol: tcp
-          port_range_min: 22
-          port_range_max: 22
-        - protocol: tcp
-          port_range_min: 6789
-          port_range_max: 6789
           remote_mode: remote_group_id
-          #remote_group_id: { get_resource: mon_security_group } # omit remote_group_id to reference yourself
-
-  node_security_group:
-    type: OS::Neutron::SecurityGroup
-    properties:
-      name: ssh_ping_inbound
-      description: traffic inbound
-      rules:
-        - protocol: icmp
         - protocol: tcp
-          port_range_min: 22
-          port_range_max: 22
+          remote_mode: remote_group_id
 
-  login_node_security_group:
+  external_inbound:
     type: OS::Neutron::SecurityGroup
     properties:
-      name: login_node_ssh_ping_inbound
-      description: traffic inbound
+      name: external_inbound
+      description: ssh and ping from anywhere
       rules:
         - protocol: icmp
         - protocol: tcp
@@ -112,7 +96,8 @@ resources:
           flavor: { get_param: mon_flavor }
           availability_zone: { get_param: az }
           security_groups:
-            - {get_resource: mon_security_group}
+            - {get_resource: external_inbound}
+            - {get_resource: cluster_internal}
           name:
             str_replace:
               template: mon-%index%-$random_string
@@ -145,7 +130,8 @@ resources:
           flavor: { get_param: mon_flavor }
           availability_zone: { get_param: az }
           security_groups:
-            - {get_resource: node_security_group}
+            - {get_resource: external_inbound}
+            - {get_resource: cluster_internal}
           name:
             str_replace:
               template: mds-%index%-$random_string
@@ -178,7 +164,8 @@ resources:
           flavor: { get_param: storage_node_flavor }
           availability_zone: { get_param: az }
           security_groups:
-            - {get_resource: login_node_security_group}
+            - {get_resource: external_inbound}
+            - {get_resource: cluster_internal}
           name:
             str_replace:
               template: login-node-$random_string
