@@ -1,4 +1,7 @@
-#!/home/hoolio/openstack/bin/python
+#!/usr/bin/env python
+
+# This script gratefully taken from https://github.com/NeCTAR-RC/rstudio-cluster-ansible-heat/
+# Written by the ever awesome Andy Bottling
 
 import argparse
 import json

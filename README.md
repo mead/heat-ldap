@@ -1,4 +1,18 @@
 # How to make a Ceph cluster on OpenStack
+
+# TLDR;
+1. `virtualenv openstack`  
+1. `. openstack/bin/activate`  
+1. `pip install python-openstackclient python-heatclient ansible`
+1. `. your-tennancy-openrc.sh`
+1. `git clone git@github.com:hooliowobbits/heat-ceph.git && cd heat-ceph`
+1. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
+1. `ansible-playbook ansible_bootstrap_ceph_deploy.yaml`
+1. `openstack stack output show ceph login-node-public-ip`
+1. `ssh -A ceph@xxx.xxx.xxx.xxx` where xxx.xxx.xxx.xxx is the public ip from above
+1. `ceph-deploy .. `
+
+# Full instructions
 ## What this is and isn't
 Is: A virtual ceph cluster is a great way to learn ceph.  
 Not: Something you should use for production workloads.  There be dragons.
@@ -28,9 +42,7 @@ on.  Security groups are hardcoded in the template.  Network uses public ip.
 1. a functioning current openstack client installed in a virtualenv:  
 .. `virtualenv openstack`  
 .. `. openstack/bin/activate`  
-.. `pip install python-openstackclient`  
-.. `pip install python-heatclient`  
-.. `pip install ansible`
+.. `pip install python-openstackclient python-heatclient ansible`  
 1. an openstack tennancy with sufficient instance and volume quota.  ideally empty.
 1. an open-rc.sh file for the tennancy above
 1. a deployment node (I use an instance running 16.04) or laptop etc to work from.  
