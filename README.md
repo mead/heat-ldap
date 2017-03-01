@@ -164,9 +164,16 @@ Or if you want to, you can omit the create step and run prepare and activate ste
 1. `ceph-deploy osd prepare storage-{0,1,2,3,4,5,6}-euk:/dev/vd{b,c,d,e}`
 1. `ceph-deploy osd activate storage-{0,1,2,3,4,5,6}-euk:/dev/vd{b,c,d,e}1`
 
+That should be it, you should have a running cluster.
+
 ## Troubleshooting ceph install
 I've found that if you purge packages with `ceph-deploy purge mon-{0,1,2}-euk` that reinstallation doesn't work.
 You may need to delete the cluster and start again.
+
+## Connect to the cluster and check health
+The login node doesn't have the ceph client installed, so it can't see the cluster.  To check cluster ssh to one of the nodes;
+1. `ssh -A ceph@mon-0-euk`
+1. `ceph -w`
 
 ## Further reading, better ceph doco etc
 see http://docs.ceph.com/docs/jewel/rados/deployment/ceph-deploy-osd/ and https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.3/html/installation_guide_for_red_hat_enterprise_linux/storage_cluster_quick_start
