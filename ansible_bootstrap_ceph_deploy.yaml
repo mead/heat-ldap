@@ -14,9 +14,6 @@
     - name: make /home/ceph/.ssh
       action: file path=/home/ceph/.ssh state=directory owner=ceph
 
-    # - name: copy over authorized_keys so ssh -A works for ceph
-    #   action: copy src=/home/ubuntu/.ssh/authorized_keys dest=/home/ceph/.ssh/authorized_keys owner=ceph
-
     - name: copy over authorized_keys so ssh -A works for ceph
       shell: rsync -ci /home/ubuntu/.ssh/authorized_keys /home/ceph/.ssh/authorized_keys
       register: rsync_result
@@ -24,3 +21,8 @@
 
     - name: chmod ceph /home/ceph/.ssh/authorized_keys
       action: file path=/home/ceph/.ssh/authorized_keys state=file owner=ceph
+
+    - name: Build hosts file
+      lineinfile: dest=/etc/hosts regexp='.*{{ item }}$' line="{{ hostvars[item].ansible_default_ipv4.address }} {{item}}" state=present
+      when: hostvars[item].ansible_default_ipv4.address is defined
+      with_items: groups['all']

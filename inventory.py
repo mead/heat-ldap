@@ -79,7 +79,6 @@ def parse_args():
 def to_json(in_dict):
     return json.dumps(in_dict, sort_keys=True, indent=2)
 
-
 def main():
     args = parse_args()
 

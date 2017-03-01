@@ -1,7 +1,7 @@
 # How to make a Ceph cluster on OpenStack
 ## What this is and isn't
 Is: A virtual ceph cluster is a great way to learn ceph.  
-Not: Something you should use for production workloads.  There be dragons..
+Not: Something you should use for production workloads.  There be dragons.
 
 ## disclaimer and about heat
 Openstack Heat has the ability to do magical (and dangerous) things to your openstack
@@ -15,31 +15,27 @@ that is no guarantee that something bad will not happen.  be careful.
 
 ## architecture
 This environment has the following topology:
-1. A deployment node (ie; where you normally run openstack client from).  That's
-where you run the heat commands in order to create the cluster.
-1. Once the heat stack is up, a login node is created; what's where you run ceph-deploy from
-1. And finally, once the ceph cluster is up, mons and storage nodes and all the rest.
-1. The ceph cluster and deployment nodes etc all use public ip addresses.
-1. The security groups still need work and may break cluster comms.  Yes this may not work.
+1. A deployment node That's where you run the heat and ansible commands in order to create and bootstrap the cluster.
+1. The stack consists of a single login node, a configurable amount of storage, mon and mds nodes.
 
 The number of mons and storage nodes and the number of OSDs per node and the
 size of each OSD volume etc is all configurable and defined in the heat environment
 file.  As is the default image used for nodes and which ssh keys to use and so
-on.  It's not all in there, security groups are still hardcoded in the template
-(help please!) but it works ok.
+on.  Security groups are hardcoded in the template.  Network uses public ip.
 
 ## Installation prerequisites
 1. an openstack environment :) and tacit approval to lean on it a bit
-1. a functioning current openstack client:  
+1. a functioning current openstack client installed in a virtualenv:  
 .. `virtualenv openstack`  
 .. `. openstack/bin/activate`  
 .. `pip install python-openstackclient`  
 .. `pip install python-heatclient`  
+.. `pip install ansible`
 1. an openstack tennancy with sufficient instance and volume quota.  ideally empty.
 1. an open-rc.sh file for the tennancy above
 1. a deployment node (I use an instance running 16.04) or laptop etc to work from.  
 1. a functioning ssh-agent.  if you don't know what that is, you'll need to.
-1. understand openstack images, default usernames etc
+1. understanding of openstack images, default usernames etc
 
 ## testing
 1. ssh to your deployment node if required
@@ -53,9 +49,7 @@ leave this session open as we'll be using it in a moment
 .. `git clone git@github.com:hooliowobbits/heat-ceph.git`
 1. `cd heat-ceph`
 1. have a look at heat_ceph_environment.yaml and sanitise for your environment
-1. no really.  have a look at heat_ceph_environment.yaml; it's critical.
-1. then create the stack:
-. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
+1. `openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
 ```
 +---------------------+--------------------------------------+
 | Field               | Value                                |
@@ -69,7 +63,6 @@ leave this session open as we'll be using it in a moment
 | stack_status_reason |                                      |
 +---------------------+--------------------------------------+`
 ```
-1. wait, then check stack deployment status with
 1. `openstack stack show ceph`
 
 everything from here assumes the stack built correctly.  Once built you shouldn't
@@ -80,19 +73,14 @@ Working out why stuff didn't spawn is as fun as it usually is with Openstack.
 Heat issues many requests and stresses the environment somewhat.  If there are
 any issues building single instances you're not going to have fun with Heat ;)
 You should try/use any/all of the following until you get CREATE_COMPLETE
-1. Check the build errors that appear under status(?).
+1. Check stack_status and stack_status_reason
 1. `openstack server list` to see what the status of the build is.
 1. Have a look at the instances and volumes under the dashboard.  I find it helps.
 1. Delete the stack and try again
 ..`openstack stack delete ceph`
 ..`openstack stack create -t heat_ceph_template.yaml -e heat_ceph_environment.yaml ceph`
-1. cry?
 1. Talk to your usual support channels.  You may need to modify the heat template(s)
 for your environment.
-
-# Setup Ceph cluster (ansible and ceph-deploy)
-From here on most work happens from the login node of the ceph cluster.  Unless
-otherwise advised, all commands now happen there.
 
 ## so what did we get??
 ```
@@ -117,63 +105,46 @@ $ openstack server list
 +----------------------------------+----------------+--------+-------------------+----------------------------------+
 ```
 
-## connect to the (new) login node
-1. determine the ip address of the login-node.  Caution if you have multiple ceph stacks ;)
-..`openstack server list | grep login`
-..or `openstack stack ceph show | grep login`
-1. note the default username of the glance image you're using
-1. ssh to the login node making sure to enable ssh-agent
-.. eg: `ssh -A ubuntu@xxx.xxx.xxx.xxx`
+## name resolution?
+all nodes have hosts files populated with every node member, this is done by ansible.
 
-## manually :( bootstrap ansible
-Ansible on the login node needs to know about your instances.  In an ideal world
-/etc/ansible/hosts would be populated automatically, but it's not yet (help please!).
-Until then we make it manually; apologies for that.
-1. connect to the deployment node (ie where you're running the openstack client)
-1. generate a list of the storage nodes
-.. `openstack server list | grep storage` etc, and build up the file.  eg;
-```
-[storage]
-130.56.253.179
-130.56.253.175
-..
+## node naming
+all nodes are named in the form <type>-<serial_number>-<random_suffix_for_this_cluster>
 
-[mons]
-130.56.253.164
-130.56.253.160
-..
-```
-etc
-1. test ansible connectivity:
-. `ansible all -s -o -a 'hostname'`
-1. type yes alot.  or fix ansible config to not require that..
+# Setup Ceph cluster
 
-## manually :( setup name resolution
-nasty hack;
-1. `openstack  server list`
-1. paste into google spreadsheets..
-1. handcraft /etc/hosts on login node
-
-## bootstrap ceph-deploy
-1. connect to your login node as ubuntu
-1. `git clone git@github.com:hooliowobbits/heat-ceph.git`
-1. `cd heat-ceph`
+## Bootstrap the cluster with ansible
+Ansible allows us to collect to all cluster nodes and make them ready.  ansible
+normally uses a static inventory file, but in this case inventory.py cleverly
+ connects to openstack to determine the cluster nodes.  You should have a look
+ at ansible_bootstrap_ceph_deploy.yaml so that you know what it's doing.
 1. `ansible-playbook ansible_bootstrap_ceph_deploy.yaml`
 
-what just happened?  not much, but the login-node should now have a ceph user
-and so should all the ceph nodes.  also the authorized_keys for ubuntu has been
-copied over for ceph, so you should now exit and login as ceph
-1. exit ssh
-1. login again with `ssh -A ceph@x.x.x.x`
-1. `ansible all -s -o -a 'whoami'`
+If that worked, then the cluster is now ready for ceph.  from here on in,
+ all work should be done as the ceph user and from the login node.  
+
+## connect to the (new) login node
+1. determine the ip address of the login-node
+..`openstack stack output show ceph login-node-public-ip`
+1. ssh to the login node as ceph and making sure to enable ssh-agent
+.. eg: `ssh -A ceph@xxx.xxx.xxx.xxx`
 1. `sudo apt-get install ceph-deploy`
 
-from here on in, all work should be done as ceph, and from the login node.
-
 ## run cepy-deploy and make things happen!!
-out of scope ;)
+Exact steps may differ depending on your ceph release, below assumes jewel.  
+Nominally the steps are as follows.  Note that node names are randomly generated
+but all follow the same pattern.  
+1. `cat /etc/hosts| grep mon`
+1. `ceph-deploy install mon-{0,1,2}-euk`
+1. `ceph-deploy new mon-{0,1,2}-euk`
+1. `ceph-deploy mon create mon-{0,1,2}-euk`
+1. `ceph-deploy gatherkeys mon-2-euk`
+1. `ceph-deploy disk zap storage-{0,1,2,3,4,5,6}-euk:/dev/vd{b,c,d,e}`
+see https://access.redhat.com/documentation/en-us/red_hat_ceph_storage/1.3/html/installation_guide_for_red_hat_enterprise_linux/storage_cluster_quick_start
 
-see http://docs.ceph.com/docs/master/rados/deployment/ceph-deploy-new/
+## Troubleshooting ceph install
+I've found that if you purge packages with `ceph-deploy purge mon-{0,1,2}-euk` that reinstallation doesn't work.
+You may need to delete the cluster and start again.
 
 # Things i don't like (because they aren't working nicely)
 1. Security groups are duplicated and embedded in multiple templates.
