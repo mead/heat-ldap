@@ -24,20 +24,21 @@ parameters:
     type: string
   ceph_release_name:
     type: string
-  # osd_journal_volume_size_in_gb:
-  #   type: number
 
 resources:
   node_security_group:
     type: OS::Neutron::SecurityGroup
     properties:
-        name: ping_and_ssh
+        name: ping_and_ssh_and_osd
         description: Ping and SSH
         rules:
           - protocol: icmp
           - protocol: tcp
             port_range_min: 22
             port_range_max: 22
+          - protocol: tcp
+            port_range_min: 6800
+            port_range_max: 7300
 
   storage-node:
     type: OS::Nova::Server
@@ -74,21 +75,3 @@ resources:
           instance_id: { get_resource: storage-node }
           osd_volume_size_in_gb: { get_param: osd_volume_size_in_gb }
           az: { get_param: az }
-
-  # osd_journal_volume:
-  #   type: OS::Cinder::Volume
-  #   properties:
-  #     size: { get_param: osd_journal_volume_size_in_gb }
-  #     description: Volume for OSD Journal
-  #     availability_zone: { get_param: az }
-  #
-  # osd_journal_volume_attachment:
-  #   type: OS::Cinder::VolumeAttachment
-  #   properties:
-  #     volume_id: { get_resource: osd_journal_volume }
-  #     instance_uuid: { get_resource: storage-node }
-
-# outputs:
-#   storage-node:
-#     description: IP Address of server having volumes attached.
-#     value: { get_attr: [storage-node, first_address] }
